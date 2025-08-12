@@ -1,0 +1,552 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>株式会社EXIO DESIGN 採用管理ツール</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', 'Noto Sans JP', sans-serif;
+            background-color: #f8f9fa;
+        }
+        /* Modal styles */
+        .modal-overlay {
+            transition: opacity 0.3s ease;
+        }
+        .modal-container {
+            transition: transform 0.3s ease, opacity 0.3s ease;
+        }
+        /* Detail Modal Tab styles */
+        .detail-tab {
+            cursor: pointer;
+            padding: 8px 16px;
+            border-bottom: 2px solid transparent;
+            color: #6b7280;
+        }
+        .detail-tab.active {
+            border-color: #2563eb;
+            color: #1e3a8a;
+            font-weight: 600;
+        }
+        /* Custom file input */
+        .custom-file-input::-webkit-file-upload-button {
+            visibility: hidden;
+        }
+        .custom-file-input::before {
+            content: 'ファイルを選択';
+            display: inline-block;
+            background: #f9fafb;
+            border: 1px solid #d1d5db;
+            border-radius: 0.375rem;
+            padding: 0.5rem 1rem;
+            outline: none;
+            white-space: nowrap;
+            -webkit-user-select: none;
+            cursor: pointer;
+            font-weight: 500;
+            font-size: 0.875rem;
+            color: #374151;
+        }
+        .custom-file-input:hover::before {
+            border-color: #9ca3af;
+        }
+    </style>
+</head>
+<body class="text-gray-800">
+
+    <!-- Header -->
+    <header class="bg-white shadow-sm sticky top-0 z-40">
+        <div class="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between h-16">
+                <div class="flex items-center space-x-8">
+                    <div class="flex-shrink-0">
+                        <h1 class="text-xl font-bold text-gray-900">EXIO DESIGN</h1>
+                    </div>
+                    <nav class="hidden md:flex space-x-6">
+                        <a href="#" class="text-sm font-medium text-gray-500 hover:text-gray-900">応募</a>
+                        <a href="#" class="text-sm font-medium text-gray-500 hover:text-gray-900">アクティビティ</a>
+                        <a href="#" class="text-sm font-medium text-gray-500 hover:text-gray-900">レポート</a>
+                        <a href="#" class="text-sm font-medium text-gray-500 hover:text-gray-900">職種・求人ページ</a>
+                    </nav>
+                </div>
+                <div class="flex items-center">
+                    <button id="add-applicant-btn" class="inline-flex items-center justify-center rounded-md border border-transparent bg-blue-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2">
+                        + 応募を追加する
+                    </button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main id="main-content" class="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <h2 class="text-2xl font-bold text-gray-900 mb-4">応募一覧</h2>
+        <p class="text-sm text-gray-600 mb-6">現在選考中の応募を確認できます。</p>
+
+        <!-- Stats -->
+        <div id="stats-container" class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-9 gap-4 mb-6">
+            <!-- Stats will be rendered here by JS -->
+        </div>
+
+        <!-- Filters -->
+        <div class="flex flex-wrap items-center justify-between gap-4 mb-4 p-4 bg-white rounded-lg shadow-sm">
+            <div class="flex items-center gap-4">
+                <div class="relative">
+                    <select id="sort-select" class="pl-3 pr-8 py-2 text-sm border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500">
+                        <option value="updated">選考ステップ更新日順</option>
+                        <option value="applied">応募日順</option>
+                    </select>
+                </div>
+                <div class="relative">
+                    <input type="text" id="search-input" placeholder="氏名、職種などで検索..." class="w-64 pl-4 pr-4 py-2 text-sm border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500">
+                </div>
+            </div>
+            <div class="flex items-center space-x-4">
+                 <span id="result-count" class="text-sm font-medium text-gray-700"></span>
+            </div>
+        </div>
+
+        <!-- Applicant List -->
+        <div class="bg-white rounded-lg shadow-sm overflow-hidden">
+            <div class="overflow-x-auto">
+                <div class="min-w-full align-middle">
+                    <div class="grid grid-cols-12 gap-4 px-6 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        <div class="col-span-3">応募者</div>
+                        <div class="col-span-2">応募職種</div>
+                        <div class="col-span-2">応募経路</div>
+                        <div class="col-span-2">選考ステップ</div>
+                        <div class="col-span-3">メモ</div>
+                    </div>
+                    <div id="applicant-list" class="bg-white">
+                        <!-- Applicant rows will be rendered here by JS -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+    
+    <!-- Add Applicant Modal -->
+    <div id="add-applicant-modal" class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 modal-overlay hidden opacity-0 overflow-y-auto">
+        <div class="bg-white rounded-lg shadow-xl w-full max-w-lg modal-container transform scale-95 my-8">
+            <form id="add-applicant-form">
+                <div class="p-6">
+                    <h3 class="text-lg font-medium leading-6 text-gray-900">新しい応募者を追加</h3>
+                    <div class="mt-6 grid grid-cols-1 gap-y-6 sm:grid-cols-2 sm:gap-x-6">
+                        <div class="sm:col-span-2"><label for="name" class="block text-sm font-medium text-gray-700">氏名</label><input type="text" name="name" id="name" required class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"></div>
+                        <div class="sm:col-span-2"><label for="position" class="block text-sm font-medium text-gray-700">応募職種</label><input type="text" name="position" id="position" required class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"></div>
+                        <div><label for="source" class="block text-sm font-medium text-gray-700">応募経路</label><select id="source" name="source" class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md"></select></div>
+                        <div><label for="stage" class="block text-sm font-medium text-gray-700">選考ステップ</label><select id="stage" name="stage" class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md"></select></div>
+                        <div class="sm:col-span-2"><label for="memo" class="block text-sm font-medium text-gray-700">メモ</label><textarea id="memo" name="memo" rows="3" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"></textarea></div>
+                        
+                        <!-- File Inputs -->
+                        <div>
+                            <label for="resume" class="block text-sm font-medium text-gray-700">履歴書 (PDF)</label>
+                            <input type="file" name="resume" id="resume" accept=".pdf" class="mt-1 block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100">
+                        </div>
+                        <div>
+                            <label for="portfolio" class="block text-sm font-medium text-gray-700">ポートフォリオ (PDF)</label>
+                            <input type="file" name="portfolio" id="portfolio" accept=".pdf" class="mt-1 block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100">
+                        </div>
+                    </div>
+                </div>
+                <div class="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
+                    <button type="submit" class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-blue-600 text-base font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 sm:ml-3 sm:w-auto sm:text-sm">保存</button>
+                    <button type="button" class="cancel-btn mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 sm:mt-0 sm:w-auto sm:text-sm">キャンセル</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Applicant Detail Modal -->
+    <div id="applicant-detail-modal" class="fixed inset-0 z-50 flex items-start justify-center bg-black bg-opacity-50 modal-overlay hidden opacity-0 overflow-y-auto pt-10">
+        <div class="bg-white rounded-lg shadow-xl w-full max-w-4xl modal-container transform scale-95 mb-10">
+            <div class="p-6">
+                <div class="flex justify-between items-start">
+                    <h3 id="detail-name" class="text-2xl font-bold leading-6 text-gray-900"></h3>
+                    <button type="button" class="cancel-btn text-gray-400 hover:text-gray-600 text-2xl">&times;</button>
+                </div>
+                <div class="mt-4 grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <!-- Left Column -->
+                    <div class="md:col-span-1 space-y-4 text-sm">
+                        <div><p class="text-xs text-gray-500">応募職種</p><p id="detail-position" class="font-medium"></p></div>
+                        <div><p class="text-xs text-gray-500">応募経路</p><a id="detail-source" href="#" target="_blank" class="font-medium text-blue-600 hover:underline"></a></div>
+                        <div><p class="text-xs text-gray-500">履歴書</p><a id="detail-resume" href="#" target="_blank" class="font-medium text-blue-600 hover:underline"></a></div>
+                        <div><p class="text-xs text-gray-500">ポートフォリオ</p><a id="detail-portfolio" href="#" target="_blank" class="font-medium text-blue-600 hover:underline"></a></div>
+                    </div>
+                    <!-- Right Column -->
+                    <div class="md:col-span-2 space-y-4">
+                        <div><p class="text-xs text-gray-500">選考ステップ</p><select id="detail-stage" class="mt-1 w-full max-w-xs p-1 text-sm border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"></select></div>
+                        <div><p class="text-xs text-gray-500">メモ</p><p id="detail-memo" class="p-2 bg-gray-50 rounded-md text-sm min-h-[40px]"></p></div>
+                    </div>
+                </div>
+            </div>
+            <div class="border-t border-gray-200">
+                <nav id="detail-tab-nav" class="flex -mb-px px-6">
+                    <span data-tab="timeline" class="detail-tab active">タイムライン</span>
+                    <span data-tab="evaluation" class="detail-tab">評価</span>
+                    <span data-tab="private" class="detail-tab">プライベート</span>
+                </nav>
+            </div>
+            <div class="p-6 bg-gray-50">
+                <div id="detail-timeline" class="detail-tab-content space-y-4">
+                     <div class="mt-6">
+                        <textarea id="new-comment-input" class="w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm" rows="3" placeholder="コメントを入力..."></textarea>
+                        <div class="mt-2 text-right">
+                            <button id="add-comment-btn" class="inline-flex items-center justify-center rounded-md border border-transparent bg-blue-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2">送信する</button>
+                        </div>
+                    </div>
+                    <div id="timeline-items" class="space-y-4">
+                        <!-- Timeline items will be rendered here -->
+                    </div>
+                </div>
+                 <div id="detail-evaluation" class="detail-tab-content hidden"><p>評価のコンテンツはここに表示されます。</p></div>
+                 <div id="detail-private" class="detail-tab-content hidden"><p>プライベートのコンテンツはここに表示されます。</p></div>
+            </div>
+        </div>
+    </div>
+
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // --- DATA ---
+            const STAGES = ['エントリー', 'カジュアル面談', '書類選考', '一次選考', '二次選考', '最終選考', '内定', '内定承諾'];
+            const SOURCES = { 
+                'FolioPort': 'https://folioport.com/', 
+                'エージェント': '#', 
+                'Wantedly': 'https://www.wantedly.com/', 
+                'ビズリーチ': 'https://www.bizreach.jp/', 
+                'リファラル': '#' 
+            };
+            
+            const createDummyDocUrl = (docType, name, content) => {
+                const html = `
+                    <!DOCTYPE html><html lang="ja"><head><meta charset="UTF-8"><title>${docType} - ${name}</title>
+                    <style>body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica Neue',Arial,'Noto Sans',sans-serif;padding:2rem;color:#333}.container{max-width:800px;margin:0 auto;border:1px solid #ccc;padding:2rem;box-shadow:0 0 10px rgba(0,0,0,0.1)}h1{border-bottom:2px solid #333;padding-bottom:.5rem}h2{color:#555;border-left:4px solid #007bff;padding-left:.8rem}pre{background-color:#f8f9fa;padding:1rem;border-radius:5px;white-space:pre-wrap;word-wrap:break-word}</style>
+                    </head><body><div class="container"><h1>${docType}</h1><p><strong>氏名:</strong> ${name}</p><hr><pre>${content}</pre></div></body></html>`;
+                return `data:text/html;charset=utf-8,${encodeURIComponent(html)}`;
+            };
+
+            const getRandomDateInSummer2025 = () => {
+                const start = new Date(2025, 5, 1); // June 1, 2025
+                const end = new Date(2025, 7, 31);   // August 31, 2025
+                const date = new Date(start.getTime() + Math.random() * (end.getTime() - start.getTime()));
+                return date.toISOString().split('T')[0];
+            };
+            
+            let applicants = [
+                { 
+                    id: 1, name: '佐藤 陽向', appliedDate: getRandomDateInSummer2025(), lastUpdated: Date.now(), position: 'UIUXデザイナー', source: { name: 'FolioPort', url: 'https://folioport.com/' }, stage: '最終選考', memo: '役員面接の日程調整中。', 
+                    resume: { name: '佐藤 陽向_履歴書.pdf', url: 'https://drive.google.com/file/d/1SwCxlAIN87ZcnaiYxIrxuCDGYbQ6gXQn/view?usp=drive_link' },
+                    portfolio: { name: 'ポートフォリオ', url: 'https://drive.google.com/file/d/1SwCxlAIN87ZcnaiYxIrxuCDGYbQ6gXQn/view?usp=drive_link' },
+                    timeline: [{ date: '2024-09-11T10:00:00Z', user: 'システム', content: '応募がありました。' }] 
+                },
+                { 
+                    id: 2, name: '中村 玲奈', appliedDate: getRandomDateInSummer2025(), lastUpdated: Date.now() - 100000, position: 'UIUXデザイナー', source: { name: 'FolioPort', url: 'https://folioport.com/' }, stage: '最終選考', memo: '最終面接の結果待ち。',
+                    resume: { name: '中村 玲奈_履歴書.pdf', url: 'https://drive.google.com/file/d/1QO0fsvLHxqJ_qXXO4eLPq7_7vH7WJl2L/view?usp=drive_link' },
+                    portfolio: { name: 'portfolio_nakamurarena.pdf', url: createDummyDocUrl('職務経歴書', '中村 玲奈', '■実績\n- コンバージョン率を5%向上させるUI改善を主導\n- デザインシステムの構築...') },
+                    timeline: [{ date: '2023-04-10T14:30:00Z', user: 'システム', content: '応募がありました。' }] 
+                },
+                { 
+                    id: 3, name: '一ノ瀬 柊杜', appliedDate: getRandomDateInSummer2025(), lastUpdated: Date.now() - 200000, position: 'UIUXデザイナー', source: { name: 'FolioPort', url: 'https://folioport.com/' }, stage: '最終選考', memo: '条件面のすり合わせ中。',
+                    resume: { name: '一ノ瀬 柊杜_履歴書.pdf', url: 'https://drive.google.com/file/d/17mkxR-LG_JjqBLbVtSgl86G72GIqhoqp/view?usp=drive_link' },
+                    portfolio: { name: 'portfolio_ichinoseshuuto.pdf', url: createDummyDocUrl('職務経歴書', '一ノ瀬 柊杜', '■開発経験\n- プロトタイピングツールの活用\n- ユーザーインタビューの設計と実施...') },
+                    timeline: [{ date: '2023-02-05T09:00:00Z', user: 'システム', content: '応募がありました。' }] 
+                },
+                { 
+                    id: 4, name: '高橋 海斗', appliedDate: getRandomDateInSummer2025(), lastUpdated: Date.now() - 300000, position: 'UIUXデザイナー', source: { name: 'FolioPort', url: 'https://folioport.com/' }, stage: '最終選考', memo: '最終面接の日程確定。',
+                    resume: { name: '高橋 海斗_履歴書.pdf', url: 'https://drive.google.com/file/d/148iR9k1DraoG3J32SO06ncPp0nymRrEx/view?usp=drive_link' },
+                    portfolio: { name: 'portfolio_takahashikaito.pdf', url: createDummyDocUrl('職務経歴書', '高橋 海斗', '■使用ツール\n- Figma, Adobe XD, Photoshop\n\n■ポートフォリオ\n- [ポートフォリオサイトへのリンク]') },
+                    timeline: [{ date: '2024-10-01T11:00:00Z', user: 'システム', content: '応募がありました。' }]
+                },
+                { 
+                    id: 5, name: '山本 心音', appliedDate: getRandomDateInSummer2025(), lastUpdated: Date.now() - 400000, position: 'UIUXデザイナー', source: { name: 'FolioPort', url: 'https://folioport.com/' }, stage: '最終選考', memo: 'オファー面談調整中。',
+                    resume: { name: '山本 心音_履歴書.pdf', url: 'https://drive.google.com/file/d/1h4DBwlgjsKVFX580AQcSntmVQP-FqHCk/view?usp=drive_link' },
+                    portfolio: { name: 'portfolio_yamamotococone.pdf', url: createDummyDocUrl('職務経歴書', '山本 心音', '■スキル\n- ワイヤーフレーム作成\n- ユーザビリティテスト\n\n■登壇経験\n- DesignShip 2024...') },
+                    timeline: [{ date: '2024-10-05T15:00:00Z', user: 'システム', content: '応募がありました。' }]
+                }
+            ];
+            let currentApplicantId = null;
+
+            // --- DOM ELEMENTS ---
+            const statsContainer = document.getElementById('stats-container');
+            const applicantList = document.getElementById('applicant-list');
+            const searchInput = document.getElementById('search-input');
+            const sortSelect = document.getElementById('sort-select');
+            const resultCount = document.getElementById('result-count');
+            
+            const addApplicantBtn = document.getElementById('add-applicant-btn');
+            const addModal = document.getElementById('add-applicant-modal');
+            const addModalForm = document.getElementById('add-applicant-form');
+            
+            const detailModal = document.getElementById('applicant-detail-modal');
+            const addCommentBtn = document.getElementById('add-comment-btn');
+            const newCommentInput = document.getElementById('new-comment-input');
+            const detailTabNav = document.getElementById('detail-tab-nav');
+
+
+            // --- FUNCTIONS ---
+            
+            function setupDropdowns() {
+                const sourceSelect = addModalForm.querySelector('#source');
+                sourceSelect.innerHTML = Object.keys(SOURCES).map(name => `<option value="${name}">${name}</option>`).join('');
+                
+                const stageSelect = addModalForm.querySelector('#stage');
+                stageSelect.innerHTML = STAGES.map(name => `<option value="${name}">${name}</option>`).join('');
+            }
+
+            function renderStats() {
+                statsContainer.innerHTML = '';
+                const totalCount = applicants.length;
+                const createCard = (title, count) => `<div class="p-4 bg-white rounded-lg shadow-sm"><p class="text-sm font-medium text-gray-500">${title}</p><p class="mt-1 text-3xl font-semibold text-gray-900">${count}</p></div>`;
+                statsContainer.innerHTML += createCard('全て', totalCount);
+                STAGES.forEach(stage => {
+                    const count = applicants.filter(a => a.stage === stage).length;
+                    statsContainer.innerHTML += createCard(stage, count);
+                });
+            }
+
+            function renderApplicants(applicantsToRender) {
+                applicantList.innerHTML = '';
+                resultCount.textContent = `${applicantsToRender.length}件`;
+
+                if (applicantsToRender.length === 0) {
+                    applicantList.innerHTML = `<div class="text-center py-12 px-6 text-gray-500">該当する応募者が見つかりませんでした。</div>`;
+                    return;
+                }
+                
+                applicantsToRender.forEach(applicant => {
+                    const row = document.createElement('div');
+                    row.className = 'grid grid-cols-12 gap-4 px-6 py-4 border-b border-gray-200 items-center hover:bg-gray-50';
+                    const stageOptions = STAGES.map(s => `<option value="${s}" ${s === applicant.stage ? 'selected' : ''}>${s}</option>`).join('');
+
+                    row.innerHTML = `
+                        <div class="col-span-3">
+                            <p class="font-semibold text-blue-600 hover:underline cursor-pointer applicant-name-link" data-id="${applicant.id}">${applicant.name}</p>
+                            <p class="text-xs text-gray-500">応募日: ${applicant.appliedDate}</p>
+                        </div>
+                        <div class="col-span-2 text-sm text-gray-600">${applicant.position}</div>
+                        <div class="col-span-2 text-sm">
+                            <a href="${applicant.source.url}" target="_blank" class="text-blue-600 hover:underline">${applicant.source.name}</a>
+                        </div>
+                        <div class="col-span-2"><select data-id="${applicant.id}" class="stage-select w-full p-1 text-xs border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500">${stageOptions}</select></div>
+                        <div class="col-span-3 text-sm text-gray-600 truncate">${applicant.memo}</div>
+                    `;
+                    applicantList.appendChild(row);
+                });
+            }
+            
+            function toggleModal(modalElement, show) {
+                if (show) {
+                    modalElement.classList.remove('hidden');
+                    setTimeout(() => {
+                        modalElement.classList.remove('opacity-0');
+                        modalElement.querySelector('.modal-container').classList.remove('scale-95');
+                    }, 10);
+                } else {
+                    modalElement.classList.add('opacity-0');
+                    modalElement.querySelector('.modal-container').classList.add('scale-95');
+                    setTimeout(() => modalElement.classList.add('hidden'), 300);
+                }
+            }
+            
+            const readFileAsDataURL = (file) => {
+                return new Promise((resolve, reject) => {
+                    const reader = new FileReader();
+                    reader.onload = () => resolve(reader.result);
+                    reader.onerror = reject;
+                    reader.readAsDataURL(file);
+                });
+            };
+
+            async function handleAddApplicant(e) {
+                e.preventDefault();
+                const formData = new FormData(addModalForm);
+                const resumeFile = addModalForm.querySelector('#resume').files[0];
+                const portfolioFile = addModalForm.querySelector('#portfolio').files[0];
+
+                const resumeData = resumeFile ? { name: resumeFile.name, url: await readFileAsDataURL(resumeFile) } : null;
+                const portfolioData = portfolioFile ? { name: portfolioFile.name, url: await readFileAsDataURL(portfolioFile) } : null;
+
+                const sourceName = formData.get('source');
+                const sourceUrl = SOURCES[sourceName] || '#';
+
+                const newApplicant = {
+                    id: Date.now(),
+                    name: formData.get('name'),
+                    appliedDate: new Date().toISOString().split('T')[0],
+                    lastUpdated: Date.now(),
+                    position: formData.get('position'),
+                    source: { name: sourceName, url: sourceUrl },
+                    stage: formData.get('stage'),
+                    memo: formData.get('memo'),
+                    resume: resumeData,
+                    portfolio: portfolioData,
+                    timeline: [{ date: new Date().toISOString(), user: 'システム', content: '応募が追加されました。' }]
+                };
+                applicants.unshift(newApplicant);
+                addModalForm.reset();
+                toggleModal(addModal, false);
+                rerenderAll();
+            }
+
+            function handleStageChange(applicantId, newStage) {
+                const applicant = applicants.find(a => a.id === applicantId);
+                if (applicant && applicant.stage !== newStage) {
+                    const oldStage = applicant.stage;
+                    applicant.stage = newStage;
+                    applicant.lastUpdated = Date.now();
+                    applicant.timeline.push({
+                        date: new Date().toISOString(),
+                        user: '採用担当',
+                        content: `選考ステップを「${oldStage}」から「${newStage}」に変更しました。`
+                    });
+                    rerenderAll();
+                }
+            }
+            
+            function filterAndSortApplicants() {
+                const searchTerm = searchInput.value.toLowerCase();
+                let filtered = applicants.filter(a => 
+                    a.name.toLowerCase().includes(searchTerm) ||
+                    a.position.toLowerCase().includes(searchTerm) ||
+                    a.source.name.toLowerCase().includes(searchTerm)
+                );
+                const sortValue = sortSelect.value;
+                filtered.sort((a, b) => sortValue === 'applied' ? new Date(b.appliedDate) - new Date(a.appliedDate) : b.lastUpdated - a.lastUpdated);
+                return filtered;
+            }
+
+            function showDetailModal(applicantId) {
+                currentApplicantId = applicantId;
+                const applicant = applicants.find(a => a.id === applicantId);
+                if (!applicant) return;
+
+                detailModal.querySelector('#detail-name').textContent = applicant.name;
+                detailModal.querySelector('#detail-position').textContent = applicant.position;
+                
+                const sourceLink = detailModal.querySelector('#detail-source');
+                sourceLink.href = applicant.source.url;
+                sourceLink.textContent = applicant.source.name;
+
+                detailModal.querySelector('#detail-memo').textContent = applicant.memo || 'メモはありません';
+                
+                const setupFileLink = (elementId, fileData) => {
+                    const link = detailModal.querySelector(elementId);
+                    if (fileData && fileData.url) {
+                        link.href = fileData.url;
+                        link.textContent = fileData.name;
+                        link.style.pointerEvents = 'auto';
+                        link.classList.add('hover:underline');
+                    } else {
+                        link.href = '#';
+                        link.textContent = 'ファイルがありません';
+                        link.style.pointerEvents = 'none';
+                        link.classList.remove('hover:underline');
+                    }
+                };
+
+                setupFileLink('#detail-resume', applicant.resume);
+                setupFileLink('#detail-portfolio', applicant.portfolio);
+
+                const stageSelect = detailModal.querySelector('#detail-stage');
+                stageSelect.innerHTML = STAGES.map(s => `<option value="${s}" ${s === applicant.stage ? 'selected' : ''}>${s}</option>`).join('');
+                stageSelect.dataset.id = applicant.id;
+
+                renderTimeline(applicant.timeline);
+                toggleModal(detailModal, true);
+            }
+            
+            function renderTimeline(timeline) {
+                const timelineContainer = detailModal.querySelector('#timeline-items');
+                timelineContainer.innerHTML = '';
+                timeline.slice().reverse().forEach(item => {
+                    const itemEl = document.createElement('div');
+                    itemEl.className = 'flex items-start';
+                    itemEl.innerHTML = `
+                        <div class="flex-shrink-0 w-10 h-10 bg-gray-300 rounded-full flex items-center justify-center font-bold text-gray-600 text-sm">${item.user.charAt(0)}</div>
+                        <div class="ml-4 flex-1">
+                            <div class="bg-white p-3 rounded-lg border">
+                                <p class="text-sm"><span class="font-semibold">${item.user}</span> <span class="text-gray-500 text-xs">${new Date(item.date).toLocaleString('ja-JP')}</span></p>
+                                <p class="mt-1 text-sm text-gray-700">${item.content}</p>
+                            </div>
+                        </div>
+                    `;
+                    timelineContainer.appendChild(itemEl);
+                });
+            }
+            
+            function handleAddComment() {
+                const content = newCommentInput.value.trim();
+                if (!content || !currentApplicantId) return;
+
+                const applicant = applicants.find(a => a.id === currentApplicantId);
+                if (applicant) {
+                    applicant.timeline.push({ date: new Date().toISOString(), user: '採用担当', content: content });
+                    applicant.lastUpdated = Date.now();
+                    newCommentInput.value = '';
+                    renderTimeline(applicant.timeline);
+                    rerenderAll();
+                }
+            }
+
+            function rerenderAll() {
+                renderStats();
+                const filtered = filterAndSortApplicants();
+                renderApplicants(filtered);
+            }
+
+            // --- EVENT LISTENERS ---
+            addApplicantBtn.addEventListener('click', () => toggleModal(addModal, true));
+            addModalForm.addEventListener('submit', handleAddApplicant);
+            searchInput.addEventListener('input', rerenderAll);
+            sortSelect.addEventListener('change', rerenderAll);
+            addCommentBtn.addEventListener('click', handleAddComment);
+            newCommentInput.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
+                    handleAddComment();
+                }
+            });
+
+            applicantList.addEventListener('click', e => {
+                const target = e.target;
+                if (target.classList.contains('applicant-name-link')) {
+                    const applicantId = parseInt(target.dataset.id, 10);
+                    showDetailModal(applicantId);
+                }
+            });
+
+            applicantList.addEventListener('change', e => {
+                if (e.target.classList.contains('stage-select')) {
+                    handleStageChange(parseInt(e.target.dataset.id), e.target.value);
+                }
+            });
+            
+            detailModal.addEventListener('change', e => {
+                if (e.target.id === 'detail-stage') {
+                    handleStageChange(parseInt(e.target.dataset.id), e.target.value);
+                }
+            });
+
+            detailTabNav.addEventListener('click', e => {
+                if (e.target.classList.contains('detail-tab')) {
+                    const tabName = e.target.dataset.tab;
+                    detailTabNav.querySelectorAll('.detail-tab').forEach(tab => tab.classList.remove('active'));
+                    e.target.classList.add('active');
+                    
+                    detailModal.querySelectorAll('.detail-tab-content').forEach(content => content.classList.add('hidden'));
+                    detailModal.querySelector(`#detail-${tabName}`).classList.remove('hidden');
+                }
+            });
+
+            document.querySelectorAll('.cancel-btn').forEach(btn => btn.addEventListener('click', (e) => toggleModal(e.target.closest('.modal-overlay'), false)));
+            document.querySelectorAll('.modal-overlay').forEach(modal => modal.addEventListener('click', (e) => { if (e.target === modal) toggleModal(modal, false); }));
+
+            // --- INITIAL RENDER ---
+            setupDropdowns();
+            rerenderAll();
+        });
+    </script>
+</body>
+</html>
